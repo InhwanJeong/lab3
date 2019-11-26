@@ -1,65 +1,52 @@
+#include <unistd.h>
+#include <sys/types.h>
+#include <dirent.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/types.h>
-#include <dirent.h> 
 
-DIR *pdir;
-struct dirent *pde;
-char *argg;
+void recursion_dir(const char *name){
+    DIR *dir;
+    struct dirent *entry;
+    char temp[20][100];
+    char *dir_path[20];
+    int i=0, k=0;
+    
+    for(int m = 0; m<20; m++)
+        dir_path[m] = NULL;// block segmentation fault
+    for(int b = 0; b<20; b++){
+        for(int n = 0; n<100; n++)
+            temp[b][n] = NULL;
+    }
+    if (!(dir = opendir(name)))
+        return;
 
-void getargs(char *cmd){
-    int narg = 0;
-
-    while (*cmd){
-        if(*cmd == ' ' || *cmd == '\t')
-            *cmd++ = '\0';
-        else{
-            argg[narg++] = cmd++;
-            while(*cmd != '\0' && *cmd != ' ' && *cmd != '\t') cmd ++;
+    printf("%s: \n", name);
+    while ((entry = readdir(dir)) != NULL) {
+        if (entry->d_type == DT_DIR) {
+            char path[1024];
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0 || strcmp(entry->d_name, ".git") == 0)
+                continue;
+            snprintf(path, sizeof(path), "%s/%s", name, entry->d_name);
+            for(int c = 0; c< strlen(path); c++){
+                temp[i][c] = path[c];
+            }
+            dir_path[i] = temp[i];
+            i++;
+            printf("%s%5s", dir_path[i-1], "");
+        }else {
+            printf("%s%5s", entry->d_name, "");
         }
-    }
-
-    argg[narg] = NULL;
-}
-
-void recursion_dir(char *arg){
-    if ((pdir = opendir(arg)) < 0 ) {}
-    else if(strcmp("..", arg) == 0){}
-    else if(strcmp(".", arg) == 0){}
-    else{
-        printf("%s:\n", arg);
-        while ((pde = readdir(pdir)) != NULL){
-            if(strcmp("..", arg) == 0){}
-            else if(strcmp(".", arg) == 0){}
-            else printf("%3s ", pde->d_name);
-        }
-        printf("\n\n");
-    }
-//    argg = strtok(pde->d_name, " ");
-//    while (argg != NULL){
-//       recursion_dir(argg);
-//       argg = strtok(NULL, " ");
-//    }
-}
-
-int main(int argc, char *argv[]){
-    if (argc < 2) {
-        fprintf(stderr, "Usage: file_dir dirname\n");
-        exit(1);
-    }
-
-    // object dir    
-    if ((pdir = opendir(argv[1])) < 0 ) {}
-
-    printf("%s:\n", argv[1]);
-    while ((pde = readdir(pdir)) != NULL){
-        printf("%3s ", pde->d_name);
-    }
+    }  
     printf("\n\n");
+    while(dir_path[k] != NULL){
+        if(dir_path[k] == NULL) break;
+        recursion_dir(dir_path[k]);
+        k++;
+    }
+    closedir(dir);
+}
 
-    // subject dir
-    recursion_dir(argv[1]);
-
-    closedir(pdir);
+int main(void) {
+    recursion_dir(".");
     return 0;
 }
